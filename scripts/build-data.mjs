@@ -19,8 +19,12 @@ export function safeUrl(value) {
   if (typeof value !== 'string') return null;
   let s = value.trim();
   if (!s) return null;
-  // The repo "Website" field is often typed without a scheme, e.g. "example.com".
-  if (!/^[a-z][a-z0-9+.-]*:/i.test(s)) s = `https://${s}`;
+  // The repo "Website" field is often typed without a scheme, e.g. "example.com"
+  // or "example.com:8080". Any other scheme (javascript:, data:, ftp:) is refused.
+  if (!/^https?:\/\//i.test(s)) {
+    if (/^[a-z][a-z0-9+.-]*:(?!\d)/i.test(s)) return null;
+    s = `https://${s}`;
+  }
   try {
     const u = new URL(s);
     return u.protocol === 'https:' || u.protocol === 'http:' ? u.href : null;
@@ -50,9 +54,21 @@ export function hiddenReason(repo, config, selfRepo) {
   if (override.hidden) return 'hidden in portal.config.json';
   if ((config.exclude ?? []).some((n) => n.toLowerCase() === name)) return 'excluded in portal.config.json';
   if ((repo.topics ?? []).includes(config.hideTopic)) return `topic "${config.hideTopic}"`;
-  // GitHub reports size 0 for repos with no commits.
-  if (repo.size === 0) return 'empty';
+  // `size` is 0 for an empty repo, but also for a new repo until GitHub
+  // recalculates it, so the live fetch confirms with the commits API
+  // and records the answer in `is_empty`.
+  if (repo.is_empty ?? repo.size === 0) return 'empty';
   return null;
+}
+
+/** True if a Website link points at a host the config says to ignore (e.g. "vercel.app"). */
+export function isIgnoredHost(url, config) {
+  if (!url) return false;
+  const host = new URL(url).hostname.toLowerCase();
+  return (config.ignoreLinkHosts ?? []).some((h) => {
+    const want = h.toLowerCase().replace(/^\.+/, '');
+    return host === want || host.endsWith(`.${want}`);
+  });
 }
 
 export function toProject(repo, config) {
@@ -62,9 +78,11 @@ export function toProject(repo, config) {
     .filter((t) => !special.has(t))
     .sort();
 
+  let website = safeUrl(repo.homepage);
+  if (isIgnoredHost(website, config)) website = null;
   const liveUrl =
     safeUrl(override.url) ??
-    safeUrl(repo.homepage) ??
+    website ??
     (repo.has_pages ? pagesUrl(config.owner, repo.name) : null);
 
   return {
@@ -85,8 +103,10 @@ export function toProject(repo, config) {
 function extraToProject(entry, i) {
   const url = safeUrl(entry.url);
   if (!url) throw new Error(`portal.config.json extra[${i}] needs a valid http(s) "url"`);
+  const { host, pathname } = new URL(url);
   return {
-    name: entry.name ?? `extra-${i + 1}`,
+    // Pins are stored by name, so the default must not depend on list order.
+    name: entry.name ?? `extra:${host}${pathname}`,
     title: entry.title ?? entry.name ?? new URL(url).hostname,
     description: entry.description ?? '',
     url,
@@ -104,18 +124,24 @@ function extraToProject(entry, i) {
 export function buildProjects(repos, config, { selfRepo } = {}) {
   const projects = [];
   const hidden = [];
+  const ignoredLinks = [];
   for (const repo of repos) {
     const reason = hiddenReason(repo, config, selfRepo);
-    if (reason) hidden.push({ name: repo.name, reason });
-    else projects.push(toProject(repo, config));
+    if (reason) {
+      hidden.push({ name: repo.name, reason });
+      continue;
+    }
+    const website = safeUrl(repo.homepage);
+    if (isIgnoredHost(website, config)) ignoredLinks.push({ name: repo.name, url: website });
+    projects.push(toProject(repo, config));
   }
   (config.extra ?? []).forEach((entry, i) => projects.push(extraToProject(entry, i)));
   projects.sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''));
-  return { projects, hidden };
+  return { projects, hidden, ignoredLinks };
 }
 
-async function gh(path, token) {
-  const res = await fetch(`${API}${path}`, {
+function ghFetch(path, token) {
+  return fetch(`${API}${path}`, {
     headers: {
       Accept: 'application/vnd.github+json',
       'X-GitHub-Api-Version': '2022-11-28',
@@ -123,6 +149,10 @@ async function gh(path, token) {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   });
+}
+
+async function gh(path, token) {
+  const res = await ghFetch(path, token);
   if (!res.ok) {
     const hint = res.status === 403 || res.status === 429 ? ' (rate limited? set GITHUB_TOKEN)' : '';
     throw new Error(`GitHub API ${res.status} for ${path}${hint}: ${await res.text()}`);
@@ -142,6 +172,13 @@ async function fetchLive(owner, token) {
     if (batch.length < 100) break;
     if (page === 10) console.warn('Stopped after 1000 repos; the rest are not listed.');
   }
+  // A size of 0 can mean "empty" or "not measured yet". The commits API
+  // answers 409 only for a repo with no commits.
+  for (const repo of repos) {
+    if (repo.size !== 0) continue;
+    const res = await ghFetch(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo.name)}/commits?per_page=1`, token);
+    repo.is_empty = res.status === 409;
+  }
   return { user, repos };
 }
 
@@ -149,8 +186,11 @@ function parseArgs(argv) {
   const args = { out: 'site/data/projects.json', config: 'portal.config.json', fixture: null };
   for (let i = 0; i < argv.length; i++) {
     const key = argv[i].replace(/^--/, '');
-    if (!(key in args)) throw new Error(`Unknown option ${argv[i]}`);
-    args[key] = argv[++i];
+    if (!Object.hasOwn(args, key)) throw new Error(`Unknown option ${argv[i]}`);
+    const value = argv[i + 1];
+    if (value === undefined || value.startsWith('--')) throw new Error(`Missing value for --${key}`);
+    args[key] = value;
+    i++;
   }
   return args;
 }
@@ -164,7 +204,7 @@ async function main() {
     ? JSON.parse(await readFile(resolve(ROOT, args.fixture), 'utf8'))
     : await fetchLive(config.owner, process.env.GITHUB_TOKEN);
 
-  const { projects, hidden } = buildProjects(repos, config, { selfRepo });
+  const { projects, hidden, ignoredLinks } = buildProjects(repos, config, { selfRepo });
   const data = {
     generatedAt: new Date().toISOString(),
     source: args.fixture ? 'fixture' : 'github',
@@ -189,16 +229,20 @@ async function main() {
   console.log(`Wrote ${projects.length} projects (${featured} featured, ${live} with a live site) to ${args.out}`);
   for (const p of projects) console.log(`  ${p.featured ? '★' : ' '} ${p.name} -> ${p.url ?? '(code only)'}`);
   for (const h of hidden) console.log(`  hidden: ${h.name} (${h.reason})`);
-  if (process.env.GITHUB_STEP_SUMMARY) await writeFile(process.env.GITHUB_STEP_SUMMARY, summary(projects, hidden), { flag: 'a' });
+  for (const l of ignoredLinks) console.log(`  ignored Website: ${l.name} ${l.url} (ignoreLinkHosts)`);
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    await writeFile(process.env.GITHUB_STEP_SUMMARY, summary(projects, hidden, ignoredLinks), { flag: 'a' });
+  }
 }
 
 /** Markdown table for the Actions run page, so the owner can check what the portal sees. */
-function summary(projects, hidden) {
+function summary(projects, hidden, ignoredLinks) {
   const cell = (s) => String(s).replace(/\|/g, '\\|');
   const rows = projects.map(
     (p) => `| ${cell(p.name)} | ${p.url ? cell(p.url) : 'code only'} | ${p.featured ? 'yes' : ''} | ${cell(p.topics.join(', '))} |`,
   );
   const gone = hidden.map((h) => `- ${cell(h.name)}: ${cell(h.reason)}`);
+  const skipped = ignoredLinks.map((l) => `- ${cell(l.name)}: ${cell(l.url)}`);
   return [
     '## Portal projects',
     '',
@@ -207,6 +251,8 @@ function summary(projects, hidden) {
     ...rows,
     '',
     gone.length ? `**Left off:**\n${gone.join('\n')}` : '',
+    '',
+    skipped.length ? `**Website ignored (ignoreLinkHosts):**\n${skipped.join('\n')}` : '',
     '',
   ].join('\n');
 }

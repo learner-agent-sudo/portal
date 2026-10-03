@@ -42,6 +42,13 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* Keep keyboard focus from landing under the sticky controls bar. */
+@media (min-width: 641px) {
+  html {
+    scroll-padding-top: 9rem;
+  }
+}
+
 body {
   margin: 0;
   background: var(--paper);
@@ -396,9 +403,9 @@ main {
 }
 
 .btn-primary:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  background: var(--accent-ink);
+  border-color: var(--accent-ink);
+  color: var(--paper);
 }
 
 .btn-ghost {
@@ -466,7 +473,7 @@ main {
 
 .card-no {
   font: italic 400 1.4rem/1 var(--serif);
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .card-title {

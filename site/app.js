@@ -46,7 +46,9 @@ function httpUrl(value) {
   }
 }
 
-const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+// numeric: 'always' gives "1 day ago" rather than "yesterday", which would
+// name the wrong calendar day for a rounded duration.
+const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'always' });
 const dateFmt = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric' });
 
 function relative(iso) {
@@ -54,6 +56,7 @@ function relative(iso) {
   if (Number.isNaN(t)) return null;
   const days = (t - Date.now()) / 86_400_000;
   const abs = Math.abs(days);
+  if (abs < 1 / 24) return 'just now';
   if (abs < 1) return rtf.format(Math.round(days * 24), 'hour');
   if (abs < 30) return rtf.format(Math.round(days), 'day');
   if (abs < 365) return rtf.format(Math.round(days / 30.44), 'month');
@@ -83,10 +86,17 @@ function visible(base) {
     const hay = [p.title, p.name, p.description, p.language, ...p.topics].join(' ').toLowerCase();
     return hay.includes(q);
   });
-  const time = (p) => Date.parse(p.updatedAt) || 0;
+  // Projects with no date sort last in both date orders.
+  const time = (p) => Date.parse(p.updatedAt);
+  const byDate = (dir) => (a, b) => {
+    const ta = time(a);
+    const tb = time(b);
+    if (Number.isNaN(ta) || Number.isNaN(tb)) return Number.isNaN(ta) - Number.isNaN(tb);
+    return dir * (ta - tb);
+  };
   const sorters = {
-    recent: (a, b) => time(b) - time(a),
-    stale: (a, b) => time(a) - time(b),
+    recent: byDate(-1),
+    stale: byDate(1),
     name: (a, b) => a.title.localeCompare(b.title, 'en', { sensitivity: 'base' }),
   };
   return list.sort(sorters[state.sort] ?? sorters.recent);
@@ -117,6 +127,7 @@ function pinButton(p) {
   });
   btn.setAttribute('aria-pressed', String(pinned));
   btn.setAttribute('aria-label', `${pinned ? 'Unpin' : 'Pin'} ${p.title}`);
+  btn.dataset.focus = `pin:${p.name}`;
   btn.addEventListener('click', () => togglePin(p.name));
   return btn;
 }
@@ -215,10 +226,15 @@ function renderTopics(base) {
 
   const box = $('#topics');
   box.replaceChildren();
-  if (counts.size < 2) return;
+  if (counts.size < 2) {
+    // No chips are drawn, so a filter left over from another view could not be cleared.
+    state.topic = null;
+    return;
+  }
   const chip = (label, topic) => {
     const b = el('button', { type: 'button', className: 'chip', textContent: label });
     b.setAttribute('aria-pressed', String(state.topic === topic));
+    b.dataset.focus = `chip:${topic ?? '*'}`;
     b.addEventListener('click', () => {
       state.topic = state.topic === topic ? null : topic;
       render();
@@ -231,8 +247,15 @@ function renderTopics(base) {
   );
 }
 
+const LIST_LABELS = { all: 'All projects', pinned: 'Pinned projects' };
+
 function render({ animate = false } = {}) {
-  if (state.view !== 'all' && baseSet().length === 0) state.view = 'all';
+  // Re-rendering replaces the buttons, so remember which one had focus.
+  const focusKey = document.activeElement?.dataset?.focus;
+  if (state.view !== 'all' && baseSet().length === 0) {
+    state.view = 'all';
+    history.replaceState(null, '', '#all');
+  }
   renderViews();
 
   const base = baseSet();
@@ -250,6 +273,7 @@ function render({ animate = false } = {}) {
     const spans = featuredSpans(list.length);
     featuredBox.replaceChildren(...list.map((p, i) => card(p, i, animate, spans)));
   } else {
+    indexBox.setAttribute('aria-label', LIST_LABELS[state.view] ?? LIST_LABELS.all);
     indexBox.replaceChildren(...list.map((p, i) => row(p, i, animate)));
   }
 
@@ -258,6 +282,13 @@ function render({ animate = false } = {}) {
     status.textContent = state.query ? `Nothing matches “${state.query.trim()}”.` : 'Nothing here yet.';
   }
   $('#pin-hint').hidden = state.view !== 'pinned';
+
+  if (focusKey) {
+    const target =
+      document.querySelector(`[data-focus="${CSS.escape(focusKey)}"]`) ??
+      document.querySelector('.view[aria-pressed="true"]');
+    target?.focus({ preventScroll: true });
+  }
 }
 
 function setView(view, { push = true } = {}) {
@@ -319,6 +350,10 @@ async function init() {
   const fromHash = location.hash.slice(1);
   const hasFeatured = state.projects.some((p) => p.featured);
   state.view = VIEWS.includes(fromHash) ? fromHash : hasFeatured ? 'featured' : 'all';
+
+  // Browsers may restore form values on reload; start from what is shown.
+  state.sort = $('#sort').value;
+  state.query = $('#search').value;
 
   for (const btn of document.querySelectorAll('.view')) {
     btn.addEventListener('click', () => setView(btn.dataset.view));
