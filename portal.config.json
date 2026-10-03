@@ -1,0 +1,10 @@
+{
+  "owner": "learner-agent-sudo",
+  "title": "Projects",
+  "tagline": "Things I have built, and the ones I am still building.",
+  "featuredTopic": "featured",
+  "hideTopic": "hide",
+  "exclude": [],
+  "overrides": {},
+  "extra": []
+}

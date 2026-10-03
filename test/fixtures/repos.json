@@ -1,0 +1,315 @@
+{
+  "_note": "SAMPLE DATA for offline tests and local preview. Hand-made from a read-only look at the repos; has_pages, topics and descriptions are guesses, not real GitHub API output.",
+  "user": {
+    "login": "learner-agent-sudo",
+    "name": null,
+    "bio": null,
+    "avatar_url": "https://avatars.githubusercontent.com/u/274960738?v=4",
+    "html_url": "https://github.com/learner-agent-sudo"
+  },
+  "repos": [
+    {
+      "name": "rev-exam",
+      "html_url": "https://github.com/learner-agent-sudo/rev-exam",
+      "description": "Offline exam-revision app that turns an EPUB textbook into cited practice questions.",
+      "homepage": "https://learner-agent-sudo.github.io/rev-exam/",
+      "topics": [
+        "learning",
+        "pwa"
+      ],
+      "has_pages": true,
+      "language": "TypeScript",
+      "stargazers_count": 0,
+      "pushed_at": "2026-10-02T20:15:40Z",
+      "private": false,
+      "fork": false,
+      "archived": false,
+      "size": 1200
+    },
+    {
+      "name": "Stock-mon",
+      "html_url": "https://github.com/learner-agent-sudo/Stock-mon",
+      "description": "Automated daily stock briefing: price moves, news signals and 13F flows.",
+      "homepage": null,
+      "topics": [
+        "featured",
+        "finance"
+      ],
+      "has_pages": true,
+      "language": "Python",
+      "stargazers_count": 0,
+      "pushed_at": "2026-10-02T18:58:10Z",
+      "private": false,
+      "fork": false,
+      "archived": false,
+      "size": 170000
+    },
+    {
+      "name": "mercy-divine",
+      "html_url": "https://github.com/learner-agent-sudo/mercy-divine",
+      "description": "Offline Rosary and Divine Mercy Chaplet prayer app with a prayer log.",
+      "homepage": null,
+      "topics": [
+        "pwa"
+      ],
+      "has_pages": false,
+      "language": "JavaScript",
+      "stargazers_count": 0,
+      "pushed_at": "2026-10-02T14:09:42Z",
+      "private": false,
+      "fork": false,
+      "archived": false,
+      "size": 6200
+    },
+    {
+      "name": "jobs",
+      "html_url": "https://github.com/learner-agent-sudo/jobs",
+      "description": null,
+      "homepage": null,
+      "topics": [],
+      "has_pages": false,
+      "language": null,
+      "stargazers_count": 0,
+      "pushed_at": "2026-09-18T18:08:12Z",
+      "private": false,
+      "fork": false,
+      "archived": false,
+      "size": 0
+    },
+    {
+      "name": "tender-tracking",
+      "html_url": "https://github.com/learner-agent-sudo/tender-tracking",
+      "description": "Research probe testing Hong Kong procurement open data.",
+      "homepage": null,
+      "topics": [],
+      "has_pages": false,
+      "language": "Python",
+      "stargazers_count": 0,
+      "pushed_at": "2026-09-17T19:31:43Z",
+      "private": false,
+      "fork": false,
+      "archived": false,
+      "size": 350
+    },
+    {
+      "name": "online-posting",
+      "html_url": "https://github.com/learner-agent-sudo/online-posting",
+      "description": "Turns phone photos into ready-to-paste Marketplace and Kijiji listings.",
+      "homepage": null,
+      "topics": [
+        "tools"
+      ],
+      "has_pages": true,
+      "language": "TypeScript",
+      "stargazers_count": 0,
+      "pushed_at": "2026-09-16T20:30:19Z",
+      "private": false,
+      "fork": false,
+      "archived": false,
+      "size": 700
+    },
+    {
+      "name": "Pdf-md",
+      "html_url": "https://github.com/learner-agent-sudo/Pdf-md",
+      "description": "In-browser PDF/Word/image to Markdown or Word converter with OCR.",
+      "homepage": null,
+      "topics": [
+        "featured",
+        "tools"
+      ],
+      "has_pages": true,
+      "language": "JavaScript",
+      "stargazers_count": 0,
+      "pushed_at": "2026-09-14T13:27:42Z",
+      "private": false,
+      "fork": false,
+      "archived": false,
+      "size": 39000
+    },
+    {
+      "name": "Monitor-law",
+      "html_url": "https://github.com/learner-agent-sudo/Monitor-law",
+      "description": "Tracks privacy and AI laws across jurisdictions with gap analysis.",
+      "homepage": null,
+      "topics": [
+        "featured",
+        "legal"
+      ],
+      "has_pages": true,
+      "language": "TypeScript",
+      "stargazers_count": 0,
+      "pushed_at": "2026-09-09T20:31:46Z",
+      "private": false,
+      "fork": false,
+      "archived": false,
+      "size": 4700
+    },
+    {
+      "name": "research-fact-base",
+      "html_url": "https://github.com/learner-agent-sudo/research-fact-base",
+      "description": "Grounded legal research chat with citation checks.",
+      "homepage": null,
+      "topics": [
+        "legal"
+      ],
+      "has_pages": false,
+      "language": "TypeScript",
+      "stargazers_count": 0,
+      "pushed_at": "2026-09-08T17:46:43Z",
+      "private": false,
+      "fork": false,
+      "archived": false,
+      "size": 820
+    },
+    {
+      "name": "Etf-analysis",
+      "html_url": "https://github.com/learner-agent-sudo/Etf-analysis",
+      "description": "Compares thematic ETFs on cost, holdings, theme purity and red flags.",
+      "homepage": null,
+      "topics": [
+        "finance"
+      ],
+      "has_pages": true,
+      "language": "JavaScript",
+      "stargazers_count": 0,
+      "pushed_at": "2026-09-06T16:54:28Z",
+      "private": false,
+      "fork": false,
+      "archived": false,
+      "size": 930
+    },
+    {
+      "name": "improve-photo",
+      "html_url": "https://github.com/learner-agent-sudo/improve-photo",
+      "description": "Darkroom: browser photo enhancer and collage maker.",
+      "homepage": null,
+      "topics": [
+        "featured",
+        "tools"
+      ],
+      "has_pages": true,
+      "language": "TypeScript",
+      "stargazers_count": 0,
+      "pushed_at": "2026-09-01T02:10:52Z",
+      "private": false,
+      "fork": false,
+      "archived": false,
+      "size": 3200
+    },
+    {
+      "name": "Imm-channel",
+      "html_url": "https://github.com/learner-agent-sudo/Imm-channel",
+      "description": "Personalized Canadian immigration roadmap, runs entirely client-side.",
+      "homepage": null,
+      "topics": [],
+      "has_pages": false,
+      "language": "TypeScript",
+      "stargazers_count": 0,
+      "pushed_at": "2026-06-11T13:33:21Z",
+      "private": false,
+      "fork": false,
+      "archived": false,
+      "size": 1200
+    },
+    {
+      "name": "legal-research",
+      "html_url": "https://github.com/learner-agent-sudo/legal-research",
+      "description": "Cross-check one AI legal answer against a source document.",
+      "homepage": null,
+      "topics": [
+        "legal"
+      ],
+      "has_pages": false,
+      "language": "TypeScript",
+      "stargazers_count": 0,
+      "pushed_at": "2026-05-27T01:55:23Z",
+      "private": false,
+      "fork": false,
+      "archived": false,
+      "size": 850
+    },
+    {
+      "name": "match-reg",
+      "html_url": "https://github.com/learner-agent-sudo/match-reg",
+      "description": "Soccer tournament hub: registration, invites and scheduling.",
+      "homepage": null,
+      "topics": [],
+      "has_pages": false,
+      "language": "TypeScript",
+      "stargazers_count": 0,
+      "pushed_at": "2026-05-26T01:54:16Z",
+      "private": false,
+      "fork": false,
+      "archived": false,
+      "size": 900
+    },
+    {
+      "name": "Playbook",
+      "html_url": "https://github.com/learner-agent-sudo/Playbook",
+      "description": "SaaS contract negotiation playbook.",
+      "homepage": null,
+      "topics": [
+        "legal"
+      ],
+      "has_pages": false,
+      "language": "TypeScript",
+      "stargazers_count": 0,
+      "pushed_at": "2026-05-16T02:19:26Z",
+      "private": false,
+      "fork": false,
+      "archived": false,
+      "size": 1100
+    },
+    {
+      "name": "learning-MnA",
+      "html_url": "https://github.com/learner-agent-sudo/learning-MnA",
+      "description": "Interactive 9-stage walkthrough of an M&A asset purchase deal.",
+      "homepage": null,
+      "topics": [
+        "learning"
+      ],
+      "has_pages": false,
+      "language": "TypeScript",
+      "stargazers_count": 0,
+      "pushed_at": "2026-05-14T14:21:53Z",
+      "private": false,
+      "fork": false,
+      "archived": false,
+      "size": 720
+    },
+    {
+      "name": "ae-training",
+      "html_url": "https://github.com/learner-agent-sudo/ae-training",
+      "description": "Choose-your-path game teaching SaaS AEs contract basics.",
+      "homepage": null,
+      "topics": [
+        "learning"
+      ],
+      "has_pages": false,
+      "language": "HTML",
+      "stargazers_count": 0,
+      "pushed_at": "2026-04-25T02:43:38Z",
+      "private": false,
+      "fork": false,
+      "archived": false,
+      "size": 320
+    },
+    {
+      "name": "learning-GDPR",
+      "html_url": "https://github.com/learner-agent-sudo/learning-GDPR",
+      "description": "Interactive GDPR training game built on 20 real enforcement cases.",
+      "homepage": null,
+      "topics": [
+        "learning"
+      ],
+      "has_pages": false,
+      "language": "HTML",
+      "stargazers_count": 0,
+      "pushed_at": "2026-04-11T03:26:30Z",
+      "private": false,
+      "fork": false,
+      "archived": false,
+      "size": 450
+    }
+  ]
+}
