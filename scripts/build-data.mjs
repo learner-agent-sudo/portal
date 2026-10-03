@@ -187,7 +187,28 @@ async function main() {
   const live = projects.filter((p) => p.url).length;
   const featured = projects.filter((p) => p.featured).length;
   console.log(`Wrote ${projects.length} projects (${featured} featured, ${live} with a live site) to ${args.out}`);
+  for (const p of projects) console.log(`  ${p.featured ? '★' : ' '} ${p.name} -> ${p.url ?? '(code only)'}`);
   for (const h of hidden) console.log(`  hidden: ${h.name} (${h.reason})`);
+  if (process.env.GITHUB_STEP_SUMMARY) await writeFile(process.env.GITHUB_STEP_SUMMARY, summary(projects, hidden), { flag: 'a' });
+}
+
+/** Markdown table for the Actions run page, so the owner can check what the portal sees. */
+function summary(projects, hidden) {
+  const cell = (s) => String(s).replace(/\|/g, '\\|');
+  const rows = projects.map(
+    (p) => `| ${cell(p.name)} | ${p.url ? cell(p.url) : 'code only'} | ${p.featured ? 'yes' : ''} | ${cell(p.topics.join(', '))} |`,
+  );
+  const gone = hidden.map((h) => `- ${cell(h.name)}: ${cell(h.reason)}`);
+  return [
+    '## Portal projects',
+    '',
+    '| Repo | Live link | Featured | Topics |',
+    '|---|---|---|---|',
+    ...rows,
+    '',
+    gone.length ? `**Left off:**\n${gone.join('\n')}` : '',
+    '',
+  ].join('\n');
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
