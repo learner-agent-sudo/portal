@@ -2,7 +2,7 @@
 
 An index of my projects that updates itself from GitHub.
 
-**Live:** https://learner-agent-sudo.github.io/portal/ (after the one-time setup below)
+**Live:** https://learner-agent-sudo.github.io/portal/
 
 Every day a GitHub Action reads my public repos, works out which ones have a
 live site, and republishes this page on GitHub Pages. I never paste URLs in
@@ -14,6 +14,12 @@ here; I fill in each repo's **About** box on GitHub instead.
 2. **Actions** tab → **Build and deploy portal** → **Run workflow**.
 
 The page goes live a minute or two later.
+
+**If the page shows this README instead of the project cards,** Source is set
+to "Deploy from a branch". With that setting GitHub's own **pages build and
+deployment** job publishes the repo files as they are. Re-running that job
+doesn't help; switch Source to **GitHub Actions** and run **Build and deploy
+portal**.
 
 ## Adding a project
 
