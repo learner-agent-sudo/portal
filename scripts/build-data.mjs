@@ -71,8 +71,82 @@ export function isIgnoredHost(url, config) {
   });
 }
 
+/** "learning-GDPR" -> "Learning GDPR". */
+export function humanize(name) {
+  return name
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+/** Plain text from a line of Markdown: drops images and formatting, keeps link text. */
+function inlineText(s) {
+  return s
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/<[^>]+>/g, '')
+    .replace(/(\*\*|__)(.+?)\1/g, '$2')
+    .replace(/(\*|_)(\S.*?\S|\S)\1/g, '$2')
+    .replace(/`([^`]*)`/g, '$1')
+    .replace(/&amp;/g, '&')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function shorten(text, max = 220) {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const sentence = cut.lastIndexOf('. ');
+  if (sentence >= 30) return cut.slice(0, sentence + 1);
+  return `${cut.slice(0, cut.lastIndexOf(' ')).replace(/[,;:\s]+$/, '')}…`;
+}
+
+/**
+ * Title and first paragraph of a README, for repos whose About box is empty.
+ * Headings, lists, tables, quotes, code and badge-only lines are skipped.
+ */
+export function readmeSummary(markdown) {
+  if (typeof markdown !== 'string' || !markdown.trim()) return { title: null, description: null };
+  const text = markdown
+    .replace(/\r\n?/g, '\n')
+    .replace(/^---\n[\s\S]*?\n---\n/, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/^(```|~~~)[\s\S]*?^\1.*$/gm, '');
+  const lines = text.split('\n');
+
+  let title = null;
+  for (let i = 0; i < lines.length; i++) {
+    const atx = lines[i].match(/^#\s+(.+?)\s*#*\s*$/);
+    const setext = lines[i].trim() && /^=+\s*$/.test(lines[i + 1] ?? '') ? lines[i] : null;
+    const raw = atx?.[1] ?? setext;
+    if (raw) {
+      title = inlineText(raw) || null;
+      break;
+    }
+  }
+  if (title && title.length > 70) title = null;
+
+  let description = null;
+  for (const block of text.split(/\n\s*\n/)) {
+    const first = block.trim();
+    if (!first) continue;
+    if (/^(#|>|\||[-*+]\s|\d+[.)]\s|<\/?(table|pre|img|picture|div\s+align)|---|===|\[!)/i.test(first)) continue;
+    if (/\n(=+|-+)\s*$/.test(first)) continue; // setext heading
+    const plain = inlineText(block.split('\n').join(' '));
+    if (plain.length < 20) continue;
+    description = shorten(plain).replace(/:$/, '.');
+    break;
+  }
+  return { title, description };
+}
+
 export function toProject(repo, config) {
   const override = lowerKeys(config.overrides)[repo.name.toLowerCase()] ?? {};
+  const readme = readmeSummary(repo.readme);
+  // A README heading that is just the repo slug ("research-fact-base") reads worse than the prettified name.
+  const readmeTitle = readme.title && !/^[\w.]+([-_][\w.]+)+$/.test(readme.title) ? readme.title : null;
   const special = new Set([config.featuredTopic, config.hideTopic]);
   const topics = [...new Set([...(repo.topics ?? []), ...(override.topics ?? [])])]
     .filter((t) => !special.has(t))
@@ -87,8 +161,8 @@ export function toProject(repo, config) {
 
   return {
     name: repo.name,
-    title: override.title ?? repo.name,
-    description: override.description ?? repo.description ?? '',
+    title: override.title ?? readmeTitle ?? humanize(repo.name),
+    description: override.description || repo.description || readme.description || '',
     url: liveUrl,
     sourceUrl: repo.html_url,
     topics,
@@ -140,10 +214,10 @@ export function buildProjects(repos, config, { selfRepo } = {}) {
   return { projects, hidden, ignoredLinks };
 }
 
-function ghFetch(path, token) {
+function ghFetch(path, token, accept = 'application/vnd.github+json') {
   return fetch(`${API}${path}`, {
     headers: {
-      Accept: 'application/vnd.github+json',
+      Accept: accept,
       'X-GitHub-Api-Version': '2022-11-28',
       'User-Agent': 'portal-build-data',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -175,9 +249,16 @@ async function fetchLive(owner, token) {
   // A size of 0 can mean "empty" or "not measured yet". The commits API
   // answers 409 only for a repo with no commits.
   for (const repo of repos) {
-    if (repo.size !== 0) continue;
-    const res = await ghFetch(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo.name)}/commits?per_page=1`, token);
-    repo.is_empty = res.status === 409;
+    const base = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo.name)}`;
+    if (repo.size === 0) {
+      const res = await ghFetch(`${base}/commits?per_page=1`, token);
+      repo.is_empty = res.status === 409;
+      if (repo.is_empty) continue;
+    }
+    if (repo.fork || repo.archived) continue;
+    // The README fills in a title and description when the About box is empty.
+    const res = await ghFetch(`${base}/readme`, token, 'application/vnd.github.raw+json');
+    repo.readme = res.ok ? await res.text() : null;
   }
   return { user, repos };
 }

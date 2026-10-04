@@ -3,7 +3,16 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { buildProjects, hiddenReason, isIgnoredHost, pagesUrl, safeUrl, toProject } from '../scripts/build-data.mjs';
+import {
+  buildProjects,
+  hiddenReason,
+  humanize,
+  isIgnoredHost,
+  pagesUrl,
+  readmeSummary,
+  safeUrl,
+  toProject,
+} from '../scripts/build-data.mjs';
 
 const config = {
   owner: 'Some-User',
@@ -117,6 +126,62 @@ test('buildProjects sorts newest first and appends valid extra entries', () => {
   assert.equal(projects[0].url, 'https://site.example.org/');
   assert.deepEqual(hidden, [{ name: 'gone', reason: 'fork' }]);
   assert.throws(() => buildProjects([], { ...config, extra: [{ url: 'javascript:x' }] }), /valid http/);
+});
+
+test('readmeSummary takes the H1 and the first real paragraph', () => {
+  const md = [
+    '<!-- badges -->',
+    '[![CI](https://x/badge.svg)](https://x)',
+    '',
+    '# 🍁 Imm Channel',
+    '',
+    '![screenshot](shot.png)',
+    '',
+    '**A personalized roadmap** from [first move](https://a.b) to `citizenship`.',
+    '',
+    '## Why',
+    'More text.',
+  ].join('\n');
+  assert.deepEqual(readmeSummary(md), {
+    title: '🍁 Imm Channel',
+    description: 'A personalized roadmap from first move to citizenship.',
+  });
+});
+
+test('readmeSummary skips lists, code, quotes and setext headings; handles empty input', () => {
+  const md = 'Darkroom\n========\n\n```sh\nnpm i\n```\n\n- a list item that is long enough\n\n> a quote that is long enough to count\n\nA browser photo lab for phone photos. It fixes what is wrong.';
+  assert.deepEqual(readmeSummary(md), {
+    title: 'Darkroom',
+    description: 'A browser photo lab for phone photos. It fixes what is wrong.',
+  });
+  assert.deepEqual(readmeSummary(null), { title: null, description: null });
+  assert.deepEqual(readmeSummary('# Only a title'), { title: 'Only a title', description: null });
+});
+
+test('long README paragraphs end at a sentence, or at a word with an ellipsis', () => {
+  const long = `# T\n\nA first sentence that is long enough. ${'word '.repeat(60)}`;
+  assert.equal(readmeSummary(long).description, 'A first sentence that is long enough.');
+  const noStop = `# T\n\n${'word '.repeat(80)}`;
+  const d = readmeSummary(noStop).description;
+  assert.ok(d.endsWith('…') && d.length <= 221, d);
+});
+
+test('title: override, then README heading (unless it is just the slug), then prettified name', () => {
+  const r = (over) => repo({ name: 'research-fact-base', ...over });
+  assert.equal(toProject(r({ readme: '# research-fact-base\n\nSome text that is long enough.' }), config).title, 'Research Fact Base');
+  assert.equal(toProject(r({ readme: '# ETF Analysis' }), config).title, 'ETF Analysis');
+  assert.equal(toProject(r({ readme: null }), config).title, 'Research Fact Base');
+  assert.equal(humanize('learning-GDPR'), 'Learning GDPR');
+  const c = { ...config, overrides: { 'research-fact-base': { title: 'Mine' } } };
+  assert.equal(toProject(r({ readme: '# ETF Analysis' }), c).title, 'Mine');
+});
+
+test('description: override, then About box, then README', () => {
+  const readme = '# T\n\nFrom the README, long enough to use.';
+  assert.equal(toProject(repo({ description: null, readme }), config).description, 'From the README, long enough to use.');
+  assert.equal(toProject(repo({ description: 'From About', readme }), config).description, 'From About');
+  const c = { ...config, overrides: { app: { description: 'From config' } } };
+  assert.equal(toProject(repo({ description: 'From About', readme }), c).description, 'From config');
 });
 
 test('CLI rejects a flag with no value instead of silently going online', async () => {

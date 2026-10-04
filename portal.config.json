@@ -4,8 +4,23 @@
   "tagline": "Things I have built, and the ones I am still building.",
   "featuredTopic": "featured",
   "hideTopic": "hide",
-  "ignoreLinkHosts": ["vercel.app"],
+  "ignoreLinkHosts": [
+    "vercel.app"
+  ],
   "exclude": [],
-  "overrides": {},
+  "overrides": {
+    "ae-training": {
+      "title": "Close the Deal",
+      "description": "A choose-your-path game that teaches SaaS account executives contract and legal basics."
+    },
+    "learning-GDPR": {
+      "title": "DataGuard: GDPR Training",
+      "description": "An interactive GDPR training game built on 20 real enforcement cases."
+    },
+    "tender-tracking": {
+      "title": "Tender Tracking",
+      "description": "A research probe into Hong Kong government procurement open data, the first step towards a tender tracker."
+    }
+  },
   "extra": []
 }
