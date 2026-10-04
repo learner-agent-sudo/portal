@@ -227,7 +227,10 @@ async function main() {
   const live = projects.filter((p) => p.url).length;
   const featured = projects.filter((p) => p.featured).length;
   console.log(`Wrote ${projects.length} projects (${featured} featured, ${live} with a live site) to ${args.out}`);
-  for (const p of projects) console.log(`  ${p.featured ? '★' : ' '} ${p.name} -> ${p.url ?? '(code only)'}`);
+  for (const p of projects) {
+    console.log(`  ${p.featured ? '★' : ' '} ${p.name} -> ${p.url ?? '(code only)'}`);
+    console.log(`      ${p.description || '(no description)'}${p.topics.length ? ` [${p.topics.join(', ')}]` : ''}`);
+  }
   for (const h of hidden) console.log(`  hidden: ${h.name} (${h.reason})`);
   for (const l of ignoredLinks) console.log(`  ignored Website: ${l.name} ${l.url} (ignoreLinkHosts)`);
   if (process.env.GITHUB_STEP_SUMMARY) {
@@ -239,15 +242,16 @@ async function main() {
 function summary(projects, hidden, ignoredLinks) {
   const cell = (s) => String(s).replace(/\|/g, '\\|');
   const rows = projects.map(
-    (p) => `| ${cell(p.name)} | ${p.url ? cell(p.url) : 'code only'} | ${p.featured ? 'yes' : ''} | ${cell(p.topics.join(', '))} |`,
+    (p) =>
+      `| ${cell(p.name)} | ${p.url ? cell(p.url) : 'code only'} | ${p.featured ? 'yes' : ''} | ${cell(p.topics.join(', '))} | ${cell(p.description || '—')} |`,
   );
   const gone = hidden.map((h) => `- ${cell(h.name)}: ${cell(h.reason)}`);
   const skipped = ignoredLinks.map((l) => `- ${cell(l.name)}: ${cell(l.url)}`);
   return [
     '## Portal projects',
     '',
-    '| Repo | Live link | Featured | Topics |',
-    '|---|---|---|---|',
+    '| Repo | Live link | Featured | Topics | Description |',
+    '|---|---|---|---|---|',
     ...rows,
     '',
     gone.length ? `**Left off:**\n${gone.join('\n')}` : '',
