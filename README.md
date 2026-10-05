@@ -86,9 +86,23 @@ Only needed for things GitHub's About box can't express.
 
 - `ignoreLinkHosts`: Website links on these hosts (and their subdomains) are
   ignored. Remove `vercel.app` from the list when those deployments work again.
-- `overrides`: per repo, any of `title`, `description`, `url`, `topics`, `featured`, `hidden`.
+- `overrides`: per repo, any of `title`, `description`, `url`, `topics`, `category`, `featured`, `hidden`.
 - `extra`: sites that are not GitHub repos. Each needs a `url`. Give each one a
   `name` that won't change, so pins stay attached to it.
+
+## What the page shows
+
+- **Card images:** the deploy screenshots every live site (Playwright) into
+  `site/thumbs/`. Projects without a live site get a cover with their name and
+  a category icon.
+- **Titles and descriptions:** from the About box if filled in, otherwise from
+  the repo's README (its main heading and first paragraph).
+- **Categories** (Legal, Finance, Learning, Tools, Research, Immigration,
+  Faith, Sports, Other) are worked out from each title and description and
+  power the filter chips. To set one yourself, add a GitHub topic with that
+  name (e.g. `legal`) or a `category` override in `portal.config.json`.
+- **Grid / Carousel** switch and a **Light / Dark / Auto** theme button. Both
+  choices are remembered in the visitor's browser.
 
 ## Pins
 
