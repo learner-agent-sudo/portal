@@ -142,6 +142,28 @@ export function readmeSummary(markdown) {
   return { title, description };
 }
 
+// Categories drive the card icon and the filter chips. Checked in order; first match wins.
+// A GitHub topic or a config override with one of these names takes precedence.
+export const CATEGORIES = [
+  ['faith', /\b(prayer|rosary|chaplet|bible|church|faith)\b/],
+  ['sports', /\b(soccer|football|tournament|league|sport|sports)\b/],
+  ['immigration', /\b(immigration|immigrate|visa|citizenship|move to canada|permanent residen\w*)\b/],
+  ['finance', /\b(stocks?|etfs?|invest\w*|portfolio of|finance|financial|trading|13f|market data)\b/],
+  ['learning', /\b(exams?|revision|training|learn\w*|course|lesson|tutorial|walkthrough|teach\w*|game)\b/],
+  ['legal', /\b(law|laws|legal|contract|gdpr|privacy|regulat\w*|compliance|playbook|m&a)\b/],
+  ['research', /\b(research|probe|open data|dataset|analysis)\b/],
+  ['tools', /\b(convert\w*|tool|photo\w*|image|listings?|markdown|pdf|generator|editor)\b/],
+];
+
+export function categoryOf({ title = '', description = '', name = '' }, topics = [], override) {
+  const known = new Set(CATEGORIES.map(([c]) => c));
+  if (override && known.has(override)) return override;
+  const fromTopic = topics.find((t) => known.has(t));
+  if (fromTopic) return fromTopic;
+  const text = `${title} ${description} ${name.replace(/[-_]/g, ' ')}`.toLowerCase();
+  return CATEGORIES.find(([, re]) => re.test(text))?.[0] ?? 'other';
+}
+
 export function toProject(repo, config) {
   const override = lowerKeys(config.overrides)[repo.name.toLowerCase()] ?? {};
   const readme = readmeSummary(repo.readme);
@@ -159,10 +181,13 @@ export function toProject(repo, config) {
     website ??
     (repo.has_pages ? pagesUrl(config.owner, repo.name) : null);
 
+  const title = override.title ?? readmeTitle ?? humanize(repo.name);
+  const description = override.description || repo.description || readme.description || '';
   return {
     name: repo.name,
-    title: override.title ?? readmeTitle ?? humanize(repo.name),
-    description: override.description || repo.description || readme.description || '',
+    title,
+    description,
+    category: categoryOf({ title, description, name: repo.name }, topics, override.category),
     url: liveUrl,
     sourceUrl: repo.html_url,
     topics,

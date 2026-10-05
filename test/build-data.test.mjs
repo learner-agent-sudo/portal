@@ -5,6 +5,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import {
   buildProjects,
+  categoryOf,
   hiddenReason,
   humanize,
   isIgnoredHost,
@@ -182,6 +183,19 @@ test('description: override, then About box, then README', () => {
   assert.equal(toProject(repo({ description: 'From About', readme }), config).description, 'From About');
   const c = { ...config, overrides: { app: { description: 'From config' } } };
   assert.equal(toProject(repo({ description: 'From About', readme }), c).description, 'From config');
+});
+
+test('categoryOf: override, then a matching topic, then keywords in order, else "other"', () => {
+  assert.equal(categoryOf({ title: 'Stock Briefing', description: 'Daily market notes.' }), 'finance');
+  assert.equal(categoryOf({ title: 'DataGuard: GDPR Training', description: 'A game.' }), 'learning');
+  assert.equal(categoryOf({ title: 'Privacy Law Monitor', description: 'Tracks laws.' }), 'legal');
+  assert.equal(categoryOf({ title: 'Research Fact Base', description: 'A legal research assistant.' }), 'legal');
+  assert.equal(categoryOf({ title: 'Darkroom', description: 'A browser photo lab.' }), 'tools');
+  assert.equal(categoryOf({ title: 'Untitled', description: '' , name: 'misc-thing' }), 'other');
+  assert.equal(categoryOf({ title: 'Stock Briefing' }, ['legal']), 'legal');
+  assert.equal(categoryOf({ title: 'Stock Briefing' }, ['legal'], 'tools'), 'tools');
+  assert.equal(categoryOf({ title: 'Stock Briefing' }, [], 'not-a-category'), 'finance');
+  assert.equal(toProject(repo({ description: 'A soccer tournament hub.' }), config).category, 'sports');
 });
 
 test('CLI rejects a flag with no value instead of silently going online', async () => {
