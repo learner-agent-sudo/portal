@@ -36,6 +36,15 @@ jobs:
           # Built-in token: only raises the API rate limit. Public repo data needs no extra access.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # Card images. A site that won't load just gets no image, and a failure
+      # here never blocks publishing the page.
+      - name: Screenshot live sites for the cards
+        continue-on-error: true
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium
+          node scripts/capture-thumbs.mjs
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
