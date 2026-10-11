@@ -51,8 +51,8 @@
 
     <nav class="controls" aria-label="Project views">
       <div class="views" role="group" aria-label="View">
-        <button type="button" class="view" data-view="featured" aria-pressed="false">Featured <span class="count"></span></button>
-        <button type="button" class="view" data-view="all" aria-pressed="false">All <span class="count"></span></button>
+        <button type="button" class="view" data-view="production" aria-pressed="false">Production <span class="count"></span></button>
+        <button type="button" class="view" data-view="development" aria-pressed="false">In development <span class="count"></span></button>
         <button type="button" class="view" data-view="pinned" aria-pressed="false">Pinned <span class="count"></span></button>
       </div>
       <div class="tools">
@@ -85,12 +85,18 @@
     </nav>
 
     <main id="main" tabindex="-1">
-      <p class="status" id="status" role="status">Loading projects…</p>
-      <section class="featured" id="featured-list" aria-label="Featured projects" hidden></section>
-      <div class="more" id="more" hidden>
-        <button type="button" class="btn btn-secondary" id="see-all" data-focus="see-all"></button>
+      <div class="section-head" id="section-head" hidden>
+        <div class="section-copy">
+          <h2 class="section-title" id="section-title"></h2>
+          <p class="section-text" id="section-text"></p>
+        </div>
+        <button type="button" class="btn btn-secondary section-action" id="section-action" data-focus="section-action" hidden></button>
       </div>
-      <ul class="grid" id="index-list" aria-label="All projects" hidden></ul>
+      <p class="status" id="status" role="status">Loading projects…</p>
+      <div class="status-alt" id="status-alt" hidden>
+        <button type="button" class="btn btn-secondary" id="status-alt-btn" data-focus="status-alt"></button>
+      </div>
+      <ul class="grid" id="index-list" aria-label="Projects in production" hidden></ul>
       <section class="carousel" id="carousel" aria-roledescription="carousel" aria-label="Projects carousel" hidden>
         <div class="carousel-track" id="carousel-track"></div>
         <div class="carousel-nav">

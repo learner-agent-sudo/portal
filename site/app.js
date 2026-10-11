@@ -4,7 +4,10 @@
 const PIN_KEY = 'portal:pins';
 const LAYOUT_KEY = 'portal:layout';
 const THEME_KEY = 'portal:theme';
-const VIEWS = ['featured', 'all', 'pinned'];
+const VIEWS = ['production', 'development', 'pinned'];
+// Old links (#featured, #all) open the front page.
+const LEGACY_VIEWS = { featured: 'production', all: 'production' };
+const isProduction = (p) => p.status === 'production';
 const LAYOUTS = ['grid', 'carousel'];
 const THEMES = ['auto', 'light', 'dark'];
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -38,7 +41,7 @@ function writePref(key, value) {
 const state = {
   projects: [],
   data: null,
-  view: 'all',
+  view: 'production',
   category: null,
   query: '',
   sort: 'recent',
@@ -114,6 +117,7 @@ const ICONS = {
   code: { d: ['m8.5 7-5 5 5 5', 'm15.5 7 5 5-5 5'] },
   star: { d: ['M12 3.6l2.55 5.17 5.7.83-4.12 4.02.97 5.68L12 16.6l-5.1 2.68.97-5.68L3.75 9.6l5.7-.83z'], join: true },
   arrow: { d: ['M5 12h14', 'm13 6 6 6-6 6'] },
+  'arrow-left': { d: ['M19 12H5', 'm11 6-6 6 6 6'] },
   sun: {
     d: [
       'M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5z',
@@ -258,9 +262,9 @@ function cover(p, { compact = false } = {}) {
 
 function baseSet() {
   const { projects, view, pins } = state;
-  if (view === 'featured') return projects.filter((p) => p.featured);
   if (view === 'pinned') return projects.filter((p) => pins.has(p.name));
-  return projects;
+  if (view === 'development') return projects.filter((p) => !isProduction(p));
+  return projects.filter(isProduction);
 }
 
 const sortKey = (p) => (p.title || p.name || '').replace(/^[^\p{L}\p{N}]+/u, '') || p.title || '';
@@ -466,22 +470,11 @@ function body(p, { eyebrow } = {}) {
   );
 }
 
-// Featured: the lead card runs full width with the screenshot beside the text;
-// the rest go in pairs, and an odd one out at the end also runs full width.
-function featureCard(p, i, n, animate) {
-  const wide = n !== 2 && (i === 0 || (i === n - 1 && (n - 1) % 2 === 1));
-  const node = el(
-    'article',
-    { className: `card feature${wide ? ' is-wide' : ''}${animate ? ' reveal' : ''}` },
-    frame(p, { showUrl: true }),
-    body(p, { eyebrow: i === 0 ? 'Featured' : null }),
-  );
-  node.style.setProperty('--i', i);
-  return tint(node, p);
-}
+// In the Pinned view a card says when its project is still in development.
+const statusEyebrow = (p) => (state.view === 'pinned' && !isProduction(p) ? 'In development' : null);
 
 function gridCard(p, i, animate) {
-  const node = el('li', { className: `card tile${animate ? ' reveal' : ''}` }, frame(p), body(p));
+  const node = el('li', { className: `card tile${animate ? ' reveal' : ''}` }, frame(p), body(p, { eyebrow: statusEyebrow(p) }));
   node.style.setProperty('--i', i);
   return tint(node, p);
 }
@@ -496,18 +489,42 @@ function endShell(count, animate, ...children) {
 
 // Closes the grid: spans whatever is left of the last row, so rows always end flush.
 function endCard(count, animate) {
+  const devCount = state.projects.filter((p) => !isProduction(p)).length;
+  if (state.view === 'production' && devCount > 0) {
+    const btn = el(
+      'button',
+      { type: 'button', className: 'btn btn-secondary' },
+      'Browse projects in development',
+      icon('arrow', 16),
+    );
+    btn.dataset.focus = 'dev-more';
+    btn.addEventListener('click', () => goToView('development'));
+    const shapes = el('span', { className: 'end-shapes' }, el('i', { className: 's-sun' }), el('i', { className: 's-pill' }), el('i', { className: 's-half' }), el('i', { className: 's-dot' }));
+    shapes.setAttribute('aria-hidden', 'true');
+    const shell = endShell(
+      count,
+      animate,
+      el(
+        'div',
+        { className: 'end-copy' },
+        el('h2', { className: 'end-title', textContent: `${devCount} more in development` }),
+        el('p', { className: 'end-text', textContent: "Projects I'm still building. Some are early, and a few only have code to look at." }),
+        btn,
+      ),
+    );
+    shell.classList.add('end-all');
+    shell.append(shapes);
+    return shell;
+  }
   if (state.view === 'pinned') {
     const btn = el(
       'button',
       { type: 'button', className: 'btn btn-secondary' },
-      `Browse all ${state.projects.length}`,
+      'Back to production',
       icon('arrow', 16),
     );
     btn.dataset.focus = 'pin-more';
-    btn.addEventListener('click', () => {
-      setView('all');
-      document.querySelector('.view[data-view="all"]')?.focus({ preventScroll: true });
-    });
+    btn.addEventListener('click', () => goToView('production'));
     return endShell(
       count,
       animate,
@@ -530,7 +547,7 @@ function endCard(count, animate) {
     el(
       'div',
       { className: 'end-copy' },
-      el('h2', { className: 'end-title', textContent: `That's all ${state.projects.length} — for now.` }),
+      el('h2', { className: 'end-title', textContent: `That's all ${count} — for now.` }),
       el('p', { className: 'end-text', textContent: 'New projects show up here as they land on GitHub.' }),
       el(
         'a',
@@ -560,7 +577,7 @@ function slideBody(p) {
   return el(
     'div',
     { className: 'slide-body' },
-    kicker(p, p.featured && state.view !== 'featured' ? 'Featured' : null),
+    kicker(p, statusEyebrow(p)),
     // Long names (some mix CJK and Latin) step down a size to keep slides even.
     el('h2', { className: `slide-title${[...(p.title ?? '')].length > 32 ? ' is-long' : ''}`, textContent: p.title }),
     p.description && el('p', { className: 'slide-desc', textContent: p.description }),
@@ -870,16 +887,64 @@ function initTheme() {
 // ---------- Render ----------
 
 function renderViews() {
-  const counts = {
-    featured: state.projects.filter((p) => p.featured).length,
-    all: state.projects.length,
-    pinned: state.projects.filter((p) => state.pins.has(p.name)).length,
-  };
+  const counts = viewCounts();
   for (const btn of document.querySelectorAll('.view')) {
     const v = btn.dataset.view;
-    btn.hidden = v !== 'all' && counts[v] === 0;
+    btn.hidden = counts[v] === 0;
     btn.setAttribute('aria-pressed', String(v === state.view));
     btn.querySelector('.count').textContent = counts[v];
+  }
+}
+
+function viewCounts() {
+  const production = state.projects.filter(isProduction).length;
+  return {
+    production,
+    development: state.projects.length - production,
+    pinned: state.projects.filter((p) => state.pins.has(p.name)).length,
+  };
+}
+
+// The front page is Production; fall back when a view has nothing in it.
+function fallbackView() {
+  const counts = viewCounts();
+  return counts.production ? 'production' : 'development';
+}
+
+const SECTION = {
+  production: {
+    title: 'In production',
+    text: 'Finished projects you can use today.',
+    list: 'Projects in production',
+  },
+  development: {
+    title: 'In development',
+    text: "Work in progress. Some are early, and a few only have code to look at for now.",
+    list: 'Projects in development',
+  },
+  pinned: {
+    title: 'Pinned',
+    text: 'Your favourites, saved in this browser only.',
+    list: 'Pinned projects',
+  },
+};
+
+function renderSection() {
+  const s = SECTION[state.view];
+  $('#section-head').hidden = !s;
+  if (!s) return;
+  $('#section-title').textContent = s.title;
+  $('#section-text').textContent = s.text;
+  const action = $('#section-action');
+  const devCount = viewCounts().development;
+  if (state.view === 'production' && devCount > 0) {
+    action.hidden = false;
+    action.replaceChildren(`${devCount} in development`, icon('arrow', 16));
+  } else if (state.view !== 'production') {
+    action.hidden = false;
+    action.replaceChildren(icon('arrow-left', 16), 'Back to production');
+  } else {
+    action.hidden = true;
   }
 }
 
@@ -924,56 +989,58 @@ function renderTopics(base) {
   );
 }
 
-const LIST_LABELS = { all: 'All projects', pinned: 'Pinned projects' };
-
 function render({ animate = false } = {}) {
   // Re-rendering replaces the buttons, so remember which one had focus.
   const focusKey = document.activeElement?.dataset?.focus;
-  if (state.view !== 'all' && baseSet().length === 0) {
-    state.view = 'all';
-    history.replaceState(null, '', '#all');
+  if (baseSet().length === 0 && state.view !== fallbackView()) {
+    state.view = fallbackView();
+    history.replaceState(null, '', `#${state.view}`);
   }
   renderViews();
   renderLayouts();
+  renderSection();
 
   const base = baseSet();
   renderTopics(base);
   const list = visible(base);
 
-  const featuredBox = $('#featured-list');
   const indexBox = $('#index-list');
   const status = $('#status');
-  const more = $('#more');
   const asCarousel = state.layout === 'carousel';
-  const asFeature = state.view === 'featured' && !asCarousel;
 
   // Only the active layout is in the DOM, so data-focus keys stay unique.
-  featuredBox.hidden = !asFeature || list.length === 0;
-  indexBox.hidden = asFeature || asCarousel || list.length === 0;
+  indexBox.hidden = asCarousel || list.length === 0;
   if (asCarousel) {
-    featuredBox.replaceChildren();
     indexBox.replaceChildren();
     renderCarousel(list, animate);
-  } else if (asFeature) {
-    clearCarousel();
-    featuredBox.replaceChildren(...list.map((p, i) => featureCard(p, i, list.length, animate)));
-    indexBox.replaceChildren();
   } else {
     clearCarousel();
-    indexBox.setAttribute('aria-label', LIST_LABELS[state.view] ?? LIST_LABELS.all);
+    indexBox.setAttribute('aria-label', SECTION[state.view]?.list ?? 'Projects');
     const cards = list.map((p, i) => gridCard(p, i, animate));
     if (list.length) cards.push(endCard(list.length, animate));
     indexBox.replaceChildren(...cards.filter(Boolean));
-    featuredBox.replaceChildren();
   }
   car.shown = asCarousel;
 
-  more.hidden = state.view !== 'featured' || state.projects.length <= list.length;
-  $('#see-all').replaceChildren(`See all ${state.projects.length} projects`, icon('arrow', 16));
-
   status.hidden = list.length > 0;
+  // A search that finds nothing here may find something in the other section.
+  const alt = $('#status-alt');
+  alt.hidden = true;
   if (!list.length) {
-    status.textContent = state.query ? `Nothing matches “${state.query.trim()}”.` : 'Nothing here yet.';
+    const where = { production: ' in production', development: ' in development', pinned: ' in your pins' }[state.view] ?? '';
+    status.textContent = state.query ? `Nothing matches “${state.query.trim()}”${where}.` : 'Nothing here yet.';
+    const other = state.view === 'production' ? 'development' : state.view === 'development' ? 'production' : null;
+    if (other && (state.query || state.category)) {
+      const saved = state.view;
+      state.view = other;
+      const n = visible(baseSet()).length;
+      state.view = saved;
+      if (n) {
+        alt.hidden = false;
+        $('#status-alt-btn').replaceChildren(`Show ${n} ${other === 'development' ? 'in development' : 'in production'}`, icon('arrow', 16));
+        $('#status-alt-btn').dataset.view = other;
+      }
+    }
   }
   $('#pin-hint').hidden = state.view !== 'pinned';
 
@@ -987,10 +1054,17 @@ function render({ animate = false } = {}) {
 }
 
 function setView(view, { push = true } = {}) {
+  view = LEGACY_VIEWS[view] ?? view;
   if (!VIEWS.includes(view)) return;
   state.view = view;
   if (push) history.replaceState(null, '', `#${view}`);
   render({ animate: true });
+}
+
+// Switch view from a button inside the content, then put focus on the new view's tab.
+function goToView(view) {
+  setView(view);
+  document.querySelector(`.view[data-view="${view}"]`)?.focus({ preventScroll: true });
 }
 
 function togglePin(name) {
@@ -1004,12 +1078,12 @@ function renderCollage(projects) {
   const box = $('#collage');
   const byRecent = (a, b) => (Date.parse(b.updatedAt) || 0) - (Date.parse(a.updatedAt) || 0);
   const withShots = projects.filter((p) => thumbUrl(p.thumbnail)).sort(byRecent);
-  const featured = withShots.filter((p) => p.featured);
-  let pool = featured.length >= 3 ? featured : withShots;
-  // Leave out what opens the default view (the lead feature, or the first row
-  // of the grid) when there are enough others, so the hero is not a repeat of
-  // the cards right below it. Then: newest on top, one from the middle, the oldest.
-  const skip = pool === featured ? 1 : 3;
+  const production = withShots.filter(isProduction);
+  let pool = production.length >= 3 ? production : withShots;
+  // Leave out the first row of the front page when there are enough others, so
+  // the hero is not a repeat of the cards right below it. Then: newest on top,
+  // one from the middle, the oldest.
+  const skip = 3;
   if (pool.length - skip >= 3) pool = pool.slice(skip);
   const n = pool.length;
   const picks = [...new Set([0, Math.round((n - 1) / 2), n - 1])].filter((i) => i >= 0 && i < n).map((i) => pool[i]);
@@ -1051,7 +1125,6 @@ function renderHeader(data) {
     Object.assign(img, { src: avatar, hidden: false });
   }
 
-  const live = data.projects.filter((p) => httpUrl(p.url)).length;
   const latest = data.projects.map((p) => p.updatedAt).filter((d) => !Number.isNaN(Date.parse(d))).sort().at(-1);
   const langs = new Map();
   for (const p of data.projects) if (p.language) langs.set(p.language, (langs.get(p.language) ?? 0) + 1);
@@ -1065,8 +1138,8 @@ function renderHeader(data) {
   const latestEl = latest ? timeEl(latest, '') : null;
   $('#stats').replaceChildren(
     ...[
-      stat('Projects', String(data.projects.length), 264),
-      stat('Live sites', String(live), 150),
+      stat('In production', String(data.projects.filter(isProduction).length), 150),
+      stat('In development', String(data.projects.filter((p) => !isProduction(p)).length), 264),
       topLang && stat('Mostly written in', topLang, 40),
       latestEl && stat('Last update', latestEl, 200),
     ].filter(Boolean),
@@ -1108,9 +1181,11 @@ async function init() {
   data.projects = state.projects;
   renderHeader(data);
 
+  // Older data files have no status: treat every project as production.
+  if (!state.projects.some((p) => p.status)) state.projects.forEach((p) => { p.status = 'production'; });
   const fromHash = location.hash.slice(1);
-  const hasFeatured = state.projects.some((p) => p.featured);
-  state.view = VIEWS.includes(fromHash) ? fromHash : hasFeatured ? 'featured' : 'all';
+  const asked = LEGACY_VIEWS[fromHash] ?? fromHash;
+  state.view = VIEWS.includes(asked) ? asked : fallbackView();
 
   // Browsers may restore form values on reload; start from what is shown.
   state.sort = $('#sort').value;
@@ -1123,10 +1198,8 @@ async function init() {
     btn.addEventListener('click', () => setLayout(btn.dataset.layout));
   }
   initCarousel();
-  $('#see-all').addEventListener('click', () => {
-    setView('all');
-    document.querySelector('.view[data-view="all"]')?.focus({ preventScroll: true });
-  });
+  $('#section-action').addEventListener('click', () => goToView(state.view === 'production' ? 'development' : 'production'));
+  $('#status-alt-btn').addEventListener('click', (e) => goToView(e.currentTarget.dataset.view));
   $('#search').addEventListener('input', (e) => {
     state.query = e.target.value;
     render();
