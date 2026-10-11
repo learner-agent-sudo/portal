@@ -12,6 +12,7 @@ import {
   pagesUrl,
   readmeSummary,
   safeUrl,
+  statusOf,
   toProject,
 } from '../scripts/build-data.mjs';
 
@@ -196,6 +197,18 @@ test('categoryOf: override, then a matching topic, then keywords in order, else 
   assert.equal(categoryOf({ title: 'Stock Briefing' }, ['legal'], 'tools'), 'tools');
   assert.equal(categoryOf({ title: 'Stock Briefing' }, [], 'not-a-category'), 'finance');
   assert.equal(toProject(repo({ description: 'A soccer tournament hub.' }), config).category, 'sports');
+});
+
+test('statusOf: override, then config list, then production/featured topic, else development', () => {
+  const c = { ...config, production: ['Stock-Mon'] };
+  assert.equal(statusOf('stock-mon', [], c), 'production');
+  assert.equal(statusOf('new-repo', [], c), 'development');
+  assert.equal(statusOf('new-repo', ['production'], c), 'production');
+  assert.equal(statusOf('new-repo', ['featured'], c), 'production');
+  assert.equal(statusOf('stock-mon', [], c, { status: 'development' }), 'development');
+  assert.equal(toProject(repo({ topics: ['production', 'tools'] }), config).status, 'production');
+  assert.deepEqual(toProject(repo({ topics: ['production', 'tools'] }), config).topics, ['tools']);
+  assert.equal(toProject(repo(), config).status, 'development');
 });
 
 test('CLI rejects a flag with no value instead of silently going online', async () => {

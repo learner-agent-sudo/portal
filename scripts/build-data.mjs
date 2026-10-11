@@ -164,12 +164,23 @@ export function categoryOf({ title = '', description = '', name = '' }, topics =
   return CATEGORIES.find(([, re]) => re.test(text))?.[0] ?? 'other';
 }
 
+// "production" projects are what visitors see first; everything else, new repos
+// included, is "development" until it is listed in portal.config.json
+// ("production"), tagged with the production or featured topic, or overridden.
+export function statusOf(name, topics, config, override = {}) {
+  if (override.status === 'production' || override.status === 'development') return override.status;
+  if ((config.production ?? []).some((n) => n.toLowerCase() === name.toLowerCase())) return 'production';
+  const productionTopic = config.productionTopic ?? 'production';
+  if (topics.includes(productionTopic) || topics.includes(config.featuredTopic)) return 'production';
+  return 'development';
+}
+
 export function toProject(repo, config) {
   const override = lowerKeys(config.overrides)[repo.name.toLowerCase()] ?? {};
   const readme = readmeSummary(repo.readme);
   // A README heading that is just the repo slug ("research-fact-base") reads worse than the prettified name.
   const readmeTitle = readme.title && !/^[\w.]+([-_][\w.]+)+$/.test(readme.title) ? readme.title : null;
-  const special = new Set([config.featuredTopic, config.hideTopic]);
+  const special = new Set([config.featuredTopic, config.hideTopic, config.productionTopic ?? 'production']);
   const topics = [...new Set([...(repo.topics ?? []), ...(override.topics ?? [])])]
     .filter((t) => !special.has(t))
     .sort();
@@ -182,6 +193,7 @@ export function toProject(repo, config) {
     (repo.has_pages ? pagesUrl(config.owner, repo.name) : null);
 
   const title = override.title ?? readmeTitle ?? humanize(repo.name);
+  const repoTopics = repo.topics ?? [];
   const description = override.description || repo.description || readme.description || '';
   return {
     name: repo.name,
@@ -191,7 +203,8 @@ export function toProject(repo, config) {
     url: liveUrl,
     sourceUrl: repo.html_url,
     topics,
-    featured: override.featured ?? (repo.topics ?? []).includes(config.featuredTopic),
+    featured: override.featured ?? repoTopics.includes(config.featuredTopic),
+    status: statusOf(repo.name, repoTopics, config, override),
     language: repo.language ?? null,
     stars: repo.stargazers_count ?? 0,
     updatedAt: repo.pushed_at ?? repo.updated_at ?? null,
@@ -212,6 +225,7 @@ function extraToProject(entry, i) {
     sourceUrl: safeUrl(entry.sourceUrl),
     topics: [...(entry.topics ?? [])].sort(),
     featured: Boolean(entry.featured),
+    status: entry.status === 'development' ? 'development' : 'production',
     language: entry.language ?? null,
     stars: 0,
     updatedAt: entry.updatedAt ?? null,

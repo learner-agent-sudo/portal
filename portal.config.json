@@ -4,6 +4,17 @@
   "tagline": "Things I have built, and the ones I am still building.",
   "featuredTopic": "featured",
   "hideTopic": "hide",
+  "productionTopic": "production",
+  "production": [
+    "Stock-mon",
+    "mercy-divine",
+    "Pdf-md",
+    "Monitor-law",
+    "Etf-analysis",
+    "improve-photo",
+    "ae-training",
+    "learning-GDPR"
+  ],
   "ignoreLinkHosts": [
     "vercel.app"
   ],
