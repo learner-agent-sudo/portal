@@ -35,14 +35,21 @@ There is nothing to do in this repo. On the project's own GitHub page, click
 The new project appears at the next daily run, or straight away if you click
 **Run workflow**.
 
-### The two special topics
+### Production and In development
 
-- **`featured`**: puts the repo on the **Featured** view, which is what
-  visitors see first. Use it for the projects you want to show off.
-- **`hide`**: leaves the repo off the portal completely.
+The page has two sections:
 
-Everything else public shows up in **All** by itself. That makes **All** the
-full list for me, and **Featured** the portfolio for everyone else.
+- **Production** is what visitors see first: finished projects people can use.
+- **In development** holds everything else, one click away (a tab, the
+  button beside the section heading, and the tile at the end of Production).
+
+A project is in **Production** when its repo name is in the `production` list
+in `portal.config.json`. Adding the topic `production` (or `featured`) to the
+repo on GitHub works too. Everything else, including any new repo, starts
+in **In development**. To promote a project, add it to the list or give it
+the topic.
+
+The topic **`hide`** leaves a repo off the portal completely.
 
 ## How the link on a card is chosen
 
@@ -72,10 +79,12 @@ Only needed for things GitHub's About box can't express.
   "tagline": "Things I have built, and the ones I am still building.",
   "featuredTopic": "featured",
   "hideTopic": "hide",
+  "productionTopic": "production",
+  "production": ["Stock-mon", "Pdf-md"],
   "ignoreLinkHosts": ["vercel.app"],
   "exclude": ["some-repo"],
   "overrides": {
-    "Playbook": { "title": "Contract Playbook", "featured": true },
+    "Playbook": { "title": "Contract Playbook", "status": "production" },
     "some-other-repo": { "url": "https://example.com/where-it-really-lives/" }
   },
   "extra": [
@@ -84,9 +93,11 @@ Only needed for things GitHub's About box can't express.
 }
 ```
 
+- `production`: repo names shown in the Production section (case doesn't
+  matter). The real file lists the current eight.
 - `ignoreLinkHosts`: Website links on these hosts (and their subdomains) are
   ignored. Remove `vercel.app` from the list when those deployments work again.
-- `overrides`: per repo, any of `title`, `description`, `url`, `topics`, `category`, `featured`, `hidden`.
+- `overrides`: per repo, any of `title`, `description`, `url`, `topics`, `category`, `status` (`production` or `development`), `featured`, `hidden`.
 - `extra`: sites that are not GitHub repos. Each needs a `url`. Give each one a
   `name` that won't change, so pins stay attached to it.
 
