@@ -1157,6 +1157,20 @@ document.addEventListener('animationend', (e) => {
   if (e.target instanceof Element) e.target.classList.remove('reveal');
 });
 
+// Visit counting stays off unless portal.config.json names a GoatCounter
+// account. count.js finds its endpoint in the data-goatcounter attribute.
+function startCounter(code) {
+  if (typeof code !== 'string' || !/^[a-z0-9](?:[a-z0-9-]{0,48}[a-z0-9])$/.test(code)) return;
+  const script = document.createElement('script');
+  script.async = true;
+  script.src = 'https://gc.zgo.at/count.js';
+  script.dataset.goatcounter = `https://${code}.goatcounter.com/count`;
+  document.head.append(script);
+  // A cached older index.html has no note; counting still works without it.
+  const note = $('#counter-note');
+  if (note) note.hidden = false;
+}
+
 // The theme switch works even if the project list fails to load.
 initTheme();
 renderLayouts();
@@ -1180,6 +1194,7 @@ async function init() {
   });
   data.projects = state.projects;
   renderHeader(data);
+  startCounter(data.goatcounter);
 
   // Older data files have no status: treat every project as production.
   if (!state.projects.some((p) => p.status)) state.projects.forEach((p) => { p.status = 'production'; });

@@ -1739,6 +1739,16 @@ main:focus {
   text-decoration-color: currentColor;
 }
 
+/* A full-width line under the footer links; its link sits inside the sentence. */
+.colophon .counter-note {
+  flex-basis: 100%;
+}
+
+.colophon .counter-note a {
+  display: inline;
+  min-height: 0;
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 1100px) {
