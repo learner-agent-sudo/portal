@@ -71,6 +71,23 @@ export function isIgnoredHost(url, config) {
   });
 }
 
+/**
+ * The GoatCounter account name from the config, or null when visit counting is off.
+ * Accepts "name", "name.goatcounter.com" or the full "https://name.goatcounter.com/count".
+ */
+export function goatcounterCode(value) {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== 'string') throw new Error('portal.config.json "goatcounter" must be a string');
+  const s = value.trim().toLowerCase();
+  if (!s) return null;
+  const code = s.match(/^(?:https?:\/\/)?([^./]+)\.goatcounter\.com(?:\/count)?\/?$/)?.[1] ?? s;
+  // Account names are one DNS label: letters, digits and dashes, 2 to 50 long.
+  if (!/^[a-z0-9](?:[a-z0-9-]{0,48}[a-z0-9])$/.test(code)) {
+    throw new Error(`portal.config.json "goatcounter": "${value}" is not a GoatCounter account name (e.g. "myname")`);
+  }
+  return code;
+}
+
 /** "learning-GDPR" -> "Learning GDPR". */
 export function humanize(name) {
   return name
@@ -325,11 +342,13 @@ async function main() {
     : await fetchLive(config.owner, process.env.GITHUB_TOKEN);
 
   const { projects, hidden, ignoredLinks } = buildProjects(repos, config, { selfRepo });
+  const goatcounter = goatcounterCode(config.goatcounter);
   const data = {
     generatedAt: new Date().toISOString(),
     source: args.fixture ? 'fixture' : 'github',
     title: config.title,
     tagline: config.tagline,
+    goatcounter,
     owner: {
       login: user.login,
       name: user.name ?? user.login,
@@ -353,6 +372,7 @@ async function main() {
   }
   for (const h of hidden) console.log(`  hidden: ${h.name} (${h.reason})`);
   for (const l of ignoredLinks) console.log(`  ignored Website: ${l.name} ${l.url} (ignoreLinkHosts)`);
+  console.log(goatcounter ? `Visit counting: on (https://${goatcounter}.goatcounter.com)` : 'Visit counting: off');
   if (process.env.GITHUB_STEP_SUMMARY) {
     await writeFile(process.env.GITHUB_STEP_SUMMARY, summary(projects, hidden, ignoredLinks), { flag: 'a' });
   }

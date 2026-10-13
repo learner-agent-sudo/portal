@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 import {
   buildProjects,
   categoryOf,
+  goatcounterCode,
   hiddenReason,
   humanize,
   isIgnoredHost,
@@ -209,6 +210,20 @@ test('statusOf: override, then config list, then production/featured topic, else
   assert.equal(toProject(repo({ topics: ['production', 'tools'] }), config).status, 'production');
   assert.deepEqual(toProject(repo({ topics: ['production', 'tools'] }), config).topics, ['tools']);
   assert.equal(toProject(repo(), config).status, 'development');
+});
+
+test('goatcounterCode: empty means off; takes a name, its host or its URL; refuses anything else', () => {
+  assert.equal(goatcounterCode(undefined), null);
+  assert.equal(goatcounterCode(''), null);
+  assert.equal(goatcounterCode('  '), null);
+  assert.equal(goatcounterCode('My-Name'), 'my-name');
+  assert.equal(goatcounterCode('myname.goatcounter.com'), 'myname');
+  assert.equal(goatcounterCode('https://myname.goatcounter.com/'), 'myname');
+  assert.equal(goatcounterCode(' https://myname.goatcounter.com/count '), 'myname');
+  for (const bad of ['a', 'my_name', 'my.name', '-name', 'name-', 'x'.repeat(51), 'https://evil.com/x', '"><script>']) {
+    assert.throws(() => goatcounterCode(bad), /not a GoatCounter account name/, bad);
+  }
+  assert.throws(() => goatcounterCode(42), /must be a string/);
 });
 
 test('CLI rejects a flag with no value instead of silently going online', async () => {
