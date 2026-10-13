@@ -77,6 +77,7 @@ Only needed for things GitHub's About box can't express.
   "owner": "learner-agent-sudo",
   "title": "Projects",
   "tagline": "Things I have built, and the ones I am still building.",
+  "goatcounter": "myname",
   "featuredTopic": "featured",
   "hideTopic": "hide",
   "productionTopic": "production",
@@ -93,6 +94,8 @@ Only needed for things GitHub's About box can't express.
 }
 ```
 
+- `goatcounter`: your GoatCounter account name, which turns visit counting
+  on (see below). Leave it `""` to keep it off.
 - `production`: repo names shown in the Production section (case doesn't
   matter). The real file lists the current eight.
 - `ignoreLinkHosts`: Website links on these hosts (and their subdomains) are
@@ -120,6 +123,26 @@ Only needed for things GitHub's About box can't express.
 The ☆ on each project pins it to a **Pinned** view. Pins are stored in the
 browser you clicked them in, so nobody else sees them. They don't sync between
 devices.
+
+## Visit counts (GoatCounter)
+
+Off until `goatcounter` in `portal.config.json` has an account name. Then
+every page load is counted with [GoatCounter](https://www.goatcounter.com),
+and the footer says so. GoatCounter uses no cookies and doesn't store IP
+addresses. The dashboard is at `https://<account name>.goatcounter.com`.
+
+- **Tagged links.** Add `?ref=` to the address you hand out, e.g.
+  `https://learner-agent-sudo.github.io/portal/?ref=cv` on the resume and
+  `?ref=li` on LinkedIn. The tag shows up under **Referrers** in the
+  dashboard. Anyone can see the tag in the link, so keep tags neutral.
+- **Skip your own visits.** Open the portal once in each browser you use with
+  `#toggle-goatcounter` on the end of the address. A popup confirms it. If
+  you only edit the address bar, press reload so the popup appears. Doing it
+  again turns counting back on. GoatCounter's *Settings → Tracking → Ignore
+  IPs* works too.
+- **What it can't see.** Visitors whose ad blocker blocks GoatCounter.
+  Switching between Production and In development is not a new page load, so it
+  isn't counted. Visits to `localhost` (local previews) are never counted.
 
 ## Working on it locally
 
