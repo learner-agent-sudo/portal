@@ -1,0 +1,89 @@
+# Checks that the live portal works and tells Healthchecks.io the result.
+#
+# Every 6 hours: the portal page, its project list (and that the daily
+# rebuild is still running), and every project's live link. Once a day, and
+# on manual runs, it also opens the portal in a real browser. None of this is
+# counted by GoatCounter: the link check runs no JavaScript, and the browser
+# check blocks GoatCounter.
+#
+# Healthchecks.io: put the check's ping URL in a repository secret named
+# HEALTHCHECKS_PING_URL (Settings -> Secrets and variables -> Actions). Each
+# run then reports "OK" or "fail" with the report attached, and if runs stop
+# (for example GitHub pausing schedules after 60 days without commits),
+# Healthchecks.io notices the silence. Without the secret, the run still
+# checks and goes red on a problem.
+
+name: Check live site
+
+on:
+  schedule:
+    - cron: '47 */6 * * *' # every 6 hours: page, list and links
+    - cron: '29 12 * * *' # daily, 12:29 UTC: the same plus the browser check
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check the page, the project list and every live link
+        id: links
+        continue-on-error: true
+        run: node scripts/check-site.mjs --report check-report.txt
+
+      - name: Install a browser
+        id: install
+        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '29 12 * * *'
+        continue-on-error: true
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium
+
+      - name: Check the portal in a browser (GoatCounter blocked)
+        id: browser
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: node scripts/check-browser.mjs --report check-report.txt
+
+      # A failed browser install is GitHub's problem, not the site's: noted, not alarmed.
+      - name: Tell Healthchecks.io
+        if: always()
+        env:
+          PING_URL: ${{ secrets.HEALTHCHECKS_PING_URL }}
+          LINKS: ${{ steps.links.outcome }}
+          INSTALL: ${{ steps.install.outcome }}
+          BROWSER: ${{ steps.browser.outcome }}
+        run: |
+          [ -s check-report.txt ] || echo "The check script stopped before writing a report; see the Actions log." > check-report.txt
+          if [ "$INSTALL" = failure ]; then echo "! Browser check skipped: the browser could not be installed" >> check-report.txt; fi
+          url=$(printf '%s' "$PING_URL" | tr -d '[:space:]')
+          if [ -z "$url" ]; then
+            echo "HEALTHCHECKS_PING_URL is not set, so Healthchecks.io was not told."
+            exit 0
+          fi
+          if [ "$LINKS" = success ] && [ "$BROWSER" != failure ]; then path=; result=OK; else path=/fail; result=fail; fi
+          code=$(curl -sS -m 20 --retry 3 -o /dev/null -w '%{http_code}' --data-binary @check-report.txt "${url%/}$path") || code="no answer"
+          if [ "$code" = 200 ]; then
+            echo "Told Healthchecks.io: $result"
+          else
+            echo "::warning::Healthchecks.io answered $code instead of 200. Check the HEALTHCHECKS_PING_URL secret."
+          fi
+
+      - name: Fail the run if a check failed
+        if: steps.links.outcome != 'success' || steps.browser.outcome == 'failure'
+        run: |
+          cat check-report.txt
+          exit 1
