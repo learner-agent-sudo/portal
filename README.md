@@ -144,10 +144,35 @@ addresses. The dashboard is at `https://<account name>.goatcounter.com`.
   Switching between Production and In development is not a new page load, so it
   isn't counted. Visits to `localhost` (local previews) are never counted.
 
+## Site checks (Healthchecks.io)
+
+The **Check live site** workflow runs every 6 hours. It checks:
+
+- the portal page (and that it is the portal, not this README);
+- the project list, and that it was rebuilt in the last 48 hours, which
+  catches a stopped daily rebuild;
+- every project's live link.
+
+Once a day, and when run by hand, it also opens the portal in a real browser
+and checks that the cards appear. A failure is retried once before it counts.
+
+None of this affects GoatCounter: the link check runs no JavaScript, and the
+browser check blocks GoatCounter.
+
+Each run tells Healthchecks.io "OK" or "fail", with the report attached, and
+Healthchecks.io emails you. If runs stop altogether, Healthchecks.io notices
+the silence and emails you too. Setup: create a check with period 6 hours and
+grace 1 hour, then put its ping URL in a repository secret named
+`HEALTHCHECKS_PING_URL` (**Settings → Secrets and variables → Actions**). Keep
+it a secret: anyone with the URL could send fake "OK"s. Without the secret
+the checks still run, and a failed run shows red in the Actions tab.
+
+To run it now: **Actions → Check live site → Run workflow**.
+
 ## Working on it locally
 
 ```sh
-npm test                 # unit tests for the data builder
+npm test                 # unit tests for the data builder and the site check
 npm run preview          # builds from sample data, serves http://localhost:8000
 npm run build-data       # builds from the real GitHub API (set GITHUB_TOKEN to avoid rate limits)
 ```
