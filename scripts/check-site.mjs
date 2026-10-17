@@ -134,7 +134,7 @@ async function main() {
   }
   const { ok, lines } = await runChecks({ portalUrl });
   const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
-  const report = [`Portal check ${stamp} UTC: ${ok ? 'all good' : 'PROBLEM FOUND'}`, ...lines, ''].join('\n');
+  const report = [`Portal check, ${stamp} UTC`, ...lines, ''].join('\n');
   console.log(report);
   if (args.report) await writeFile(resolve(ROOT, args.report), report);
   if (process.env.GITHUB_STEP_SUMMARY) {
